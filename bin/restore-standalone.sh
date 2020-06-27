@@ -16,9 +16,12 @@ WORKING_DIR="$(mktemp -d -t kafka-backup.XXXXXX)"
 # Cleanup after SIGTERM/SIGINT
 _term() {
   echo "Detected finished restore. Terminating Kafka Connect…"
+  echo "=> Sleeping 30 seconds to be sure no more commits are left...."
+  sleep 30
+
   kill $PID
   echo "Waiting for Kafka Connect to terminate…"
-  sleep 5
+  sleep 10
   kill $PID2
   rm -r "$WORKING_DIR"
   echo ""

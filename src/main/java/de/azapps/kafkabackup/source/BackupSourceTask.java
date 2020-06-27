@@ -33,6 +33,7 @@ public class BackupSourceTask extends SourceTask {
     private int batchSize = 100;
     private OffsetSource offsetSource;
     private List<String> topics;
+    private long lastCommit = System.currentTimeMillis();
 
     @Override
     public String version() {
@@ -105,7 +106,7 @@ public class BackupSourceTask extends SourceTask {
         List<SourceRecord> sourceRecords = new ArrayList<>();
         if (finishedPartitions.equals(partitionReaders.keySet())) {
             long currentTime = System.currentTimeMillis();
-            if (currentTime - lastPrint > 5000) {
+            if (currentTime - lastCommit > 20000 && currentTime - lastPrint > 5000) {
                 log.info("All records read. Restore was successful");
                 lastPrint = currentTime;
             }
@@ -152,9 +153,13 @@ public class BackupSourceTask extends SourceTask {
 
     @Override
     public void commitRecord(SourceRecord record, RecordMetadata metadata) {
+        lastCommit = System.currentTimeMillis(); // now
+
         TopicPartition topicPartition = new TopicPartition(metadata.topic(), metadata.partition());
         long sourceOffset = (Long) record.sourceOffset().get(SOURCE_OFFSET_OFFSET);
         long targetOffset = metadata.offset();
+
+        log.debug("CommitedRecord topicPartition({}) sourceOffset({}) targetOffset({})", topicPartition, sourceOffset, targetOffset);
         offsetSource.syncGroupForOffset(topicPartition, sourceOffset, targetOffset);
     }
 
